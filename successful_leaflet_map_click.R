@@ -2,6 +2,7 @@
 library(shiny)
 library(leaflet)
 library(plotly)
+library(readr)
 
 # Load and preprocess the data from a CSV file
 data <- read_csv("Full_Ecoli_Data.csv") %>%
