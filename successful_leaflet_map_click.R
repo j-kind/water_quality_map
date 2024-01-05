@@ -2,6 +2,7 @@
 library(shiny)
 library(leaflet)
 library(plotly)
+library(readr)
 
 # Load and preprocess the data from a CSV file
 data <- read_csv("Full_Ecoli_Data.csv") %>%
@@ -35,7 +36,7 @@ server <- function(input, output, session) {
         layerId = ~`Site Code`              # Specify which column will be used for the id of the markers
       )
   })
-
+  
   # Define the click event handler
   observeEvent(input$map_marker_click, {
     click <- input$map_marker_click
@@ -66,7 +67,7 @@ server <- function(input, output, session) {
   )
   
 }
-  
+
 # Run the Shiny application
 shinyApp(ui = ui, server = server)
 
