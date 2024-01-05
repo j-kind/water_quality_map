@@ -23,16 +23,19 @@ ui <- fluidPage(
   # Welcome message
   HTML(
     '<div style="padding: 10px; font-size: 20px; color: #1d3259; text-align: center;">
-      <p>Welcome to the Water Quality Map! Explore E. Coli Levels in your area.</p>
-      <p>Click on a marker to view a history of E.coli levels for each site.</p>
-      <p>Red markers indicate sites where at least one violation has been found.</p>
+      <p>Welcome to the Water Quality Map! Check E. Coli levels in your local waterways.</p>
+      <p>Click on a marker to view a history of E.coli levels for that site.</p>
+     
     </div>'
   ),
   # Leaflet map output
-  tags$div(style = "padding: 5px 20px; margin: 5px 20px;",
+  tags$div(style = "padding: 5px 20px 0px 20px; margin: 5px 20px;",
            leafletOutput("map")),
   # Plotly plot output
-  HTML('<br>'),
+  HTML('<div style="padding: 0px 20px 0px 20px; margin: 0px 20px 0px 20px; color: #1d3259; font-size: 12px;">
+   <p>Red markers indicate sites where at least one violation has been found</p>
+  </div>
+       <br>'),
   tags$div(style = "padding: 5px 20px; margin: 5px 20px;", 
            plotlyOutput("plot"))
 )
@@ -57,8 +60,6 @@ server <- function(input, output, session) {
         radius = 5, 
         color = ~ifelse(exceeded_threshold, "#b81604", "#0254eb"),
         fillColor = ~ifelse(exceeded_threshold, "#b81604", "#0254eb"),
-        # color = "#0254eb", 
-        # fillColor =  "#0254eb", 
         fillOpacity = 0.8, 
         stroke = TRUE, 
         weight = 3
@@ -96,11 +97,11 @@ server <- function(input, output, session) {
     ) %>%
       layout(
         title = if (is.null(selectedSite()))
-          "E. coli Levels - All Sites"
-        else 
-          paste("E. coli Levels - Site", selectedSite()),
-        xaxis = list(title = "Date"),
-        yaxis = list(title = "E. coli (MPN/100mL)"),
+        list(text = "E. coli Levels - All Sites", font = list(color = '#1d3259'))
+        else
+          list(text = paste("E. coli Levels - Site", selectedSite()), font = list(color = '#1d3259')),
+        xaxis = list(title = "Date", titlefont = list(color = '#1d3259'), tickfont = list(color = '#1d3259')),
+        yaxis = list(title = "E. coli (MPN/100mL)", titlefont = list(color = '#1d3259'), tickfont = list(color = '#1d3259')),
         shapes = list(
           list(
             type = 'line',

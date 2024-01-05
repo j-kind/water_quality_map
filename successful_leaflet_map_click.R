@@ -1,75 +1,56 @@
-# Load required Shiny and Leaflet libraries
+# Load necessary libraries
 library(shiny)
 library(leaflet)
 library(plotly)
 library(readr)
 
-# Load and preprocess the data from a CSV file
+# Load and preprocess data
 data <- read_csv("Full_Ecoli_Data.csv") %>%
-  # Convert date and time columns to POSIXct format
   mutate(across(4, ~as.POSIXct(., format = "%m/%d/%Y %I:%M:%S %p"))) 
 
-# Define the Shiny UI
+# Define user interface
 ui <- fluidPage(
-  titlePanel("Water Quality Map"),          # Application title
-  
-  leafletOutput("map"),                     # Output area for the Leaflet map
-  
-  verbatimTextOutput("click_info"),         # Output area for displaying click information
-  plotlyOutput("plot")
+  titlePanel("Water Quality Map"),  
+  leafletOutput("map"),             # For displaying the map
+  plotlyOutput("plot")              # For displaying the plot
 ) 
 
-
-# Define the Shiny server function
+# Server logic
 server <- function(input, output, session) {
   
-  # Render the Leaflet map
+  # Store the selected site ID from map
+  selectedSite <- reactiveVal(NULL)
+  
+  # Create and render the map
   output$map <- renderLeaflet({
     leaflet() %>%
-      addTiles() %>%                        # Add a generic base tile layer (your map)
-      setView(lng = -68.97, lat = 45.52, zoom = 8) %>%  # Set initial map view parameters
-      # Add bounds
-      addCircleMarkers(
-        data = data,                        # Use the 'data' dataframe
-        lat = ~Latitude,                    # Specify latitude column
-        lng = ~Longitude,                   # Specify longitude column
-        layerId = ~`Site Code`              # Specify which column will be used for the id of the markers
-      )
+      addTiles() %>%                
+      setView(lng = -68.97, lat = 45.52, zoom = 8) %>%
+      addCircleMarkers(data = data, lat = ~Latitude, lng = ~Longitude, layerId = ~`Site Code`)
   })
   
-  # Define the click event handler
+  # Update selected site ID when clicked on map
   observeEvent(input$map_marker_click, {
-    click <- input$map_marker_click
-    if (is.null(click)) {
-      # If no marker was clicked, exit the event handler
-      return()
-    }
-    
-    # Retrieve the ID of the clicked marker (the column that was set above)
-    clicked_id <- click$id
-    
-    # Prepare the text to display in the 'click_info' output area
-    output$click_info <- renderText({
-      # Construct a message indicating the selected site
-      paste("You have selected site", clicked_id)
-    })
+    selectedSite(input$map_marker_click$id)
   })
   
-  output$plot <- renderPlotly(
-    data %>% plot_ly(
-      x = ~`Visit Datetime`, 
-      y = ~Result, 
-      type = "scatter", 
-      mode = "markers", 
-      source = "plot"
-    )
-    
-  )
+  # Filter data based on selected site
+  plotData <- reactive({
+    if (is.null(selectedSite())) {
+      data
+    } else {
+      data %>% filter(`Site Code` == selectedSite())
+    }
+  })
   
+  # Create and render the plot
+  output$plot <- renderPlotly({
+    plot_ly(
+      data = plotData(), x = ~`Visit Datetime`, y = ~Result, type = "scatter", mode = "markers"
+    ) %>%
+      layout(title = if (is.null(selectedSite())) "E. coli Levels - All Sites" else paste("E. coli Levels - Site", selectedSite()))
+  })
 }
 
-# Run the Shiny application
+# Run the app
 shinyApp(ui = ui, server = server)
-
-# Example popup HTML https://github.com/rstudio/shiny-examples/blob/main/063-superzip-example/server.R
-# https://matt-dray.github.io/earl18-crosstalk/04_leaflet-flexdash-dt-crosstalk.html
