@@ -14,6 +14,8 @@ data <- read_csv("Full_Ecoli_Data.csv") %>%
     mutate(exceeded_threshold = any(Result > 236)) %>%
     ungroup()
 
+max_result <- plyr::round_any(max(data$Result, na.rm = TRUE), 50, ceiling)
+
 # ---- Define Shiny UI ----
 # User Interface of the Shiny app
 ui <- fluidPage(
@@ -101,7 +103,8 @@ server <- function(input, output, session) {
         else
           list(text = paste("E. coli Levels - Site", selectedSite()), font = list(color = '#1d3259')),
         xaxis = list(title = "Date", titlefont = list(color = '#1d3259'), tickfont = list(color = '#1d3259')),
-        yaxis = list(title = "E. coli (MPN/100mL)", titlefont = list(color = '#1d3259'), tickfont = list(color = '#1d3259')),
+        yaxis = list(title = "E. coli (MPN/100mL)", titlefont = list(color = '#1d3259'), 
+                     tickfont = list(color = '#1d3259'), range = c(0, max_result)),
         shapes = list(
           list(
             type = 'line',
