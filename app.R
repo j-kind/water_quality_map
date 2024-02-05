@@ -12,9 +12,35 @@ data <- read_csv("Full_Ecoli_Data.csv") %>%
   mutate(across(4, ~ as.POSIXct(., format = "%m/%d/%Y %I:%M:%S %p"))) %>%
     group_by(`Site Code`) %>%
     mutate(exceeded_threshold = any(Result > 236)) %>%
+    mutate(highest_violation = ifelse(any(exceeded_threshold), max(Result, na.rm = TRUE), NA)) %>%
     ungroup()
 
 max_result <- plyr::round_any(max(data$Result, na.rm = TRUE), 50, ceiling)
+
+# Calculate quartiles
+
+quartiles <- data %>% 
+  filter(Result > 236) %>%
+  pull(Result) %>%
+  quantile(probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
+
+# ---- Define Functions ----
+get_color <- Vectorize(function(exceeded, highest_violation) {
+  if (is.na(highest_violation) | !exceeded) {
+    return("#0254eb") # Blue for sites that never exceeded the threshold
+  } else {
+    if (highest_violation > quartiles[3]) {
+      return("#b81604") # Darkest red for values above the 3rd quartile
+    } else if (highest_violation > quartiles[2]) {
+      return("#d04a26") # Medium red for values above the 2nd quartile
+    } else if (highest_violation > quartiles[1]) {
+      return("#e17c48") # Light red for values above the 1st quartile
+    } else {
+      return("#f2ae6a") # Lightest red for values in the 1st quartile
+    }
+  }
+})
+
 
 # ---- Define Shiny UI ----
 # User Interface of the Shiny app
@@ -35,7 +61,7 @@ ui <- fluidPage(
            leafletOutput("map")),
   # Plotly plot output
   HTML('<div style="padding: 0px 20px 0px 20px; margin: 0px 20px 0px 20px; color: #1d3259; font-size: 12px;">
-   <p>Red markers indicate sites where at least one violation has been found</p>
+   <p>Orange and red markers indicate sites where at least one violation has been found. Markers are coloured based on highest violation recorded.</p>
   </div>
        <br>'),
   tags$div(style = "padding: 5px 20px; margin: 5px 20px;", 
@@ -60,8 +86,10 @@ server <- function(input, output, session) {
         lng = ~ Longitude, 
         layerId = ~ `Site Code`, 
         radius = 5, 
-        color = ~ifelse(exceeded_threshold, "#b81604", "#0254eb"),
-        fillColor = ~ifelse(exceeded_threshold, "#b81604", "#0254eb"),
+        #color = ~ifelse(exceeded_threshold, "#b81604", "#0254eb"),
+        #fillColor = ~ifelse(exceeded_threshold, "#b81604", "#0254eb"),
+        color = get_color(data$exceeded_threshold, data$highest_violation),
+        fillColor = get_color(data$exceeded_threshold, data$highest_violation),
         fillOpacity = 0.8, 
         stroke = TRUE, 
         weight = 3
